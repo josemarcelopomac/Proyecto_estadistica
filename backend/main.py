@@ -2,7 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 from formulas import calcular_estadistica_descriptiva, calcular_probabilidad_condicional
-import os # <-- IMPORTAMOS ESTO
+import numpy as np
+import os 
+
 app = FastAPI()
 
 # Permite que tu frontend de React (localhost:5173) se conecte con Python sin bloqueos de seguridad
@@ -25,14 +27,12 @@ try:
 except Exception:
     df_global = pd.read_csv(RUTA_CSV)
 
-# LIMPIEZA CRÍTICA: Forzar que Latitud y Longitud sean números puros
+
 df_global['Latitud'] = pd.to_numeric(df_global['Latitud'], errors='coerce')
 df_global['Longitud'] = pd.to_numeric(df_global['Longitud'], errors='coerce')
 
-# Limpiar espacios en los nombres de los departamentos
 df_global['Departamento'] = df_global['Departamento'].astype(str).str.strip().str.upper()
 
-# Eliminar filas que se hayan quedado sin coordenadas válidas por el error
 df_global = df_global.dropna(subset=['Latitud', 'Longitud'])
 
 
@@ -82,4 +82,35 @@ def obtener_analisis(depto: str):
         "resumen": resumen_descriptivo,
         "probabilidades": probabilidades_tipo,
         "puntos": puntos_mapeados
+    }
+
+def calcular_distancia_haversine(lat1, lon1, lat2, lon2):
+    R = 6371.0  # Radio de la Tierra en km
+    
+    lat1, lon1, lat2, lon2 = map(np.radians, [lat1, lon1, lat2, lon2])
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    
+    a = np.sin(dlat/2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2)**2
+    c = 2 * np.arcsin(np.sqrt(a))
+    return R * c
+    
+@app.get("/api/tipos")
+def obtener_tipos():
+    tipos_unicos = df_global['Tipo'].dropna().unique().tolist()
+    return sorted([str(t).strip() for t in tipos_unicos if str(t).strip() != ""])
+
+@app.get("/api/conteo-tipos")
+def obtener_conteo_tipos(depto: str):
+    df_filtrado = df_global[df_global['Departamento'].str.upper() == depto.upper()]
+    
+    if df_filtrado.empty:
+        return {"total_encontrados": 0, "data_grafica": []}
+        
+    conteo_tipos = df_filtrado['Tipo'].value_counts().to_dict()
+    chart_data = [{"nombre": str(tipo).strip(), "cantidad": cantidad} for tipo, cantidad in conteo_tipos.items()]
+    
+    return {
+        "total_encontrados": len(df_filtrado),
+        "data_grafica": sorted(chart_data, key=lambda x: x['cantidad'], reverse=True)
     }

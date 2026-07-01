@@ -3,6 +3,7 @@ import { type MetricasEstadisticas } from './types';
 import SelectorDepto from './componentes/SelectorDepto';
 import TarjetasMetricas from './componentes/TarjetasMetricas';
 import MapaDispersion from './componentes/MapaDispersion';
+import MapDashboard from './componentes/Mapa_dasboard';
 
 export default function App() {
   const [departamento, setDepartamento] = useState<string>('');
@@ -59,8 +60,9 @@ export default function App() {
             <h3 style={{ marginTop: 0, color: '#ffffff', borderBottom: '1px solid #374151', paddingBottom: '10px' }}>Mapa de Dispersión de Coordenadas</h3>
             <MapaDispersion puntos={datos.puntos} centro={datos.resumen.centro_urbano} depto={departamento} />
           </div>
-        </div>
+        </div> 
       )}
+      <MapDashboard />
     </div>
   );
 }
